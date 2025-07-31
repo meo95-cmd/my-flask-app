@@ -1,104 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Task Manager Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="p-4">
+    <div class="container">
+        <h1 class="mb-4">📋 Quản lý công việc nhóm</h1>
+
+        <!-- Dashboard -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="alert alert-info">Tổng số công việc: <strong id="totalTask">0</strong></div>
+            </div>
+            <div class="col-md-9">
+                <canvas id="summaryChart" height="100"></canvas>
+            </div>
+        </div>
+
+        <!-- Lọc dữ liệu -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <label>Lọc theo người phụ trách:</label>
+                <input type="text" id="filterPerson" class="form-control" placeholder="Nhập tên...">
+            </div>
+            <div class="col-md-3">
+                <label>Lọc theo mức độ ưu tiên:</label>
+                <select id="filterPriority" class="form-select">
+                    <option value="">-- Tất cả --</option>
+                    <option value="thấp">thấp</option>
+                    <option value="trung bình">trung bình</option>
+                    <option value="cao">cao</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label>Lọc theo ngày:</label>
+                <input type="date" id="filterDate" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label>Lọc theo tháng:</label>
+                <input type="month" id="filterMonth" class="form-control">
+            </div>
+        </div>
+
+        <!-- Nút xuất CSV -->
+        <a href="/export" class="btn btn-outline-primary mb-3">📥 Tải về Excel (.csv)</a>
+
+        <!-- Biểu đồ theo ngày -->
+        <canvas id="taskChart" class="mb-4" height="100"></canvas>
+
+        <!-- Form nhập mới -->
+        <form id="taskForm">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Ngày</th>
+                        <th>Thiết bị</th>
+                        <th>Vấn đề</th>
+                        <th>Nguyên nhân</th>
+                        <th>Đối sách</th>
+                        <th>Phụ trách</th>
+                        <th>Ưu tiên</th>
+                        <th>Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" name="no" required class="form-control" /></td>
+                        <td><input type="date" name="date" required class="form-control" /></td>
+                        <td><input type="text" name="device" required class="form-control" /></td>
+                        <td><input type="text" name="problem" required class="form-control" /></td>
+                        <td><input type="text" name="cause" required class="form-control" /></td>
+                        <td><input type="text" name="solution" required class="form-control" /></td>
+                        <td><input type="text" name="person" required class="form-control" /></td>
+                        <td>
+                            <select name="priority" required class="form-select">
+                                <option value="thấp">thấp</option>
+                                <option value="trung bình">trung bình</option>
+                                <option value="cao">cao</option>
+                            </select>
+                        </td>
+                        <td><textarea name="comment" required class="form-control"></textarea></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="submit" class="btn btn-success">➕ Thêm công việc</button>
+        </form>
+
+        <!-- Bảng dữ liệu -->
+        <hr>
+        <table id="taskTable" class="table table-striped table-bordered mt-3">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Ngày</th>
+                    <th>Thiết bị</th>
+                    <th>Vấn đề</th>
+                    <th>Nguyên nhân</th>
+                    <th>Đối sách</th>
+                    <th>Phụ trách</th>
+                    <th>Ưu tiên</th>
+                    <th>Comment</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <!-- Modal chỉnh sửa -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="editForm">
+                    <div class="modal-header">
+                        <h5 class="modal-title">✏️ Chỉnh sửa công việc</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body row g-3 p-3">
+                        <input type="hidden" id="editNo">
+                        <div class="col-md-6"><label>Ngày</label><input type="date" id="editDate" class="form-control" required></div>
+                        <div class="col-md-6"><label>Thiết bị</label><input type="text" id="editDevice" class="form-control" required></div>
+                        <div class="col-md-6"><label>Vấn đề</label><input type="text" id="editProblem" class="form-control" required></div>
+                        <div class="col-md-6"><label>Nguyên nhân</label><input type="text" id="editCause" class="form-control" required></div>
+                        <div class="col-md-6"><label>Đối sách</label><input type="text" id="editSolution" class="form-control" required></div>
+                        <div class="col-md-6"><label>Phụ trách</label><input type="text" id="editPerson" class="form-control" required></div>
+                        <div class="col-md-6">
+                            <label>Ưu tiên</label>
+                            <select id="editPriority" class="form-select" required>
+                                <option value="thấp">thấp</option>
+                                <option value="trung bình">trung bình</option>
+                                <option value="cao">cao</option>
+                            </select>
+                        </div>
+                        <div class="col-12"><label>Comment</label><textarea id="editComment" class="form-control" required></textarea></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary">💾 Lưu</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">❌ Hủy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script xử lý -->
     <script>
-    const form = document.getElementById("taskForm");
-    const editForm = document.getElementById("editForm");
-    const taskTableBody = document.querySelector("#taskTable tbody");
-    let currentEditNo;
+        const form = document.getElementById("taskForm");
+        const editForm = document.getElementById("editForm");
+        const taskTableBody = document.querySelector("#taskTable tbody");
+        let currentEditNo;
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const task = {
-        No: formData.get("no"),
-        date: formData.get("date"),
-        device: formData.get("device"),
-        problem: formData.get("problem"),
-        cause: formData.get("cause"),
-        solution: formData.get("solution"),
-        person: formData.get("person"),
-        priority: formData.get("priority"),
-        comment: formData.get("comment")
-      };
-      await fetch("/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(task)
-      });
-      form.reset();
-      loadTasks();
-    });
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const task = {
+                No: formData.get("no"),
+                date: formData.get("date"),
+                device: formData.get("device"),
+                problem: formData.get("problem"),
+                cause: formData.get("cause"),
+                solution: formData.get("solution"),
+                person: formData.get("person"),
+                priority: formData.get("priority"),
+                comment: formData.get("comment")
+            };
+            await fetch("/add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(task)
+            });
+            form.reset();
+            loadTasks();
+        });
 
-    taskTableBody.addEventListener("click", (e) => {
-      const row = e.target.closest("tr");
-      const taskNo = row.children[0].textContent;
+        taskTableBody.addEventListener("click", (e) => {
+            const row = e.target.closest("tr");
+            const taskNo = row.children[0].textContent;
 
-      if (e.target.classList.contains("deleteBtn")) {
-        fetch(`/delete/${taskNo}`, { method: "DELETE" }).then(loadTasks);
-      }
+            if (e.target.classList.contains("deleteBtn")) {
+                fetch(`/delete/${taskNo}`, { method: "DELETE" }).then(loadTasks);
+            }
 
-      if (e.target.classList.contains("editBtn")) {
-        currentEditNo = taskNo;
-        document.getElementById("editNo").value = taskNo;
-        document.getElementById("editDate").value = row.children[1].textContent;
-        document.getElementById("editDevice").value = row.children[2].textContent;
-        document.getElementById("editProblem").value = row.children[3].textContent;
-        document.getElementById("editCause").value = row.children[4].textContent;
-        document.getElementById("editSolution").value = row.children[5].textContent;
-        document.getElementById("editPerson").value = row.children[6].textContent;
-        document.getElementById("editPriority").value = row.children[7].textContent;
-        document.getElementById("editComment").value = row.children[8].textContent;
-        const modal = new bootstrap.Modal(document.getElementById("editModal"));
-        modal.show();
-      }
-    });
+            if (e.target.classList.contains("editBtn")) {
+                currentEditNo = taskNo;
+                document.getElementById("editNo").value = taskNo;
+                document.getElementById("editDate").value = row.children[1].textContent;
+                document.getElementById("editDevice").value = row.children[2].textContent;
+                document.getElementById("editProblem").value = row.children[3].textContent;
+                document.getElementById("editCause").value = row.children[4].textContent;
+                document.getElementById("editSolution").value = row.children[5].textContent;
+                document.getElementById("editPerson").value = row.children[6].textContent;
+                document.getElementById("editPriority").value = row.children[7].textContent;
+                document.getElementById("editComment").value = row.children[8].textContent;
+                const modal = new bootstrap.Modal(document.getElementById("editModal"));
+                modal.show();
+            }
+        });
 
-    editForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const editedTask = {
-        date: document.getElementById("editDate").value,
-        device: document.getElementById("editDevice").value,
-        problem: document.getElementById("editProblem").value,
-        cause: document.getElementById("editCause").value,
-        solution: document.getElementById("editSolution").value,
-        person: document.getElementById("editPerson").value,
-        priority: document.getElementById("editPriority").value,
-        comment: document.getElementById("editComment").value
-      };
-      await fetch(`/edit/${currentEditNo}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editedTask)
-      });
-      const modal = bootstrap.Modal.getInstance(document.getElementById("editModal"));
-      modal.hide();
-      loadTasks();
-    });
+        editForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const editedTask = {
+                date: document.getElementById("editDate").value,
+                device: document.getElementById("editDevice").value,
+                problem: document.getElementById("editProblem").value,
+                cause: document.getElementById("editCause").value,
+                solution: document.getElementById("editSolution").value,
+                person: document.getElementById("editPerson").value,
+                priority: document.getElementById("editPriority").value,
+                comment: document.getElementById("editComment").value
+            };
+            await fetch(`/edit/${currentEditNo}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(editedTask)
+            });
+            const modal = bootstrap.Modal.getInstance(document.getElementById("editModal"));
+            modal.hide();
+            loadTasks();
+        });
 
-    async function loadTasks() {
-      const res = await fetch("/tasks");
-      const tasks = await res.json();
-      taskTableBody.innerHTML = "";
-      tasks.forEach(task => {
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td>${task.No}</td>
-          <td>${task.date}</td>
-          <td>${task.device}</td>
-          <td>${task.problem}</td>
-          <td>${task.cause}</td>
-          <td>${task.solution}</td>
-          <td>${task.person}</td>
-          <td>${task.priority}</td>
-          <td>${task.comment}</td>
-          <td>
-            <button class="btn btn-warning btn-sm editBtn">✏️</button>
-            <button class="btn btn-danger btn-sm deleteBtn">🗑️</button>
-          </td>
-        `;
-        taskTableBody.appendChild(row);
-      });
-    }
+        async function loadTasks() {
+            const res = await fetch("/tasks");
+            const tasks = await res.json();
+            taskTableBody.innerHTML = "";
+            tasks.forEach(task => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+              <td>${task.No}</td>
+              <td>${task.date}</td>
+              <td>${task.device}</td>
+              <td>${task.problem}</td>
+              <td>${task.cause}</td>
+              <td>${task.solution}</td>
+              <td>${task.person}</td>
+              <td>${task.priority}</td>
+              <td>${task.comment}</td>
+              <td>
+                <button class="btn btn-warning btn-sm editBtn">✏️</button>
+                <button class="btn btn-danger btn-sm deleteBtn">🗑️</button>
+              </td>
+            `;
+                taskTableBody.appendChild(row);
+            });
+        }
 
-    loadTasks();
+        loadTasks();
     </script>
-  </body>
+</body>
 </html>
