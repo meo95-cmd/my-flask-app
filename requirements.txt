@@ -2,9 +2,3 @@ flask
 requests
 pandas
 gunicorn
-render_template
-jsonify
-json
-os
-csv
-io
