@@ -15,8 +15,6 @@ def save_tasks(tasks):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(tasks, f, ensure_ascii=False, indent=2)
 
-tasks = load_tasks()
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -24,7 +22,8 @@ def index():
 @app.route("/add", methods=["POST"])
 def add_task():
     data = request.json
-    task = {
+    tasks = load_tasks()
+    tasks.append({
         "No": data["No"],
         "date": data["date"],
         "device": data["device"],
@@ -33,44 +32,36 @@ def add_task():
         "solution": data["solution"],
         "person": data["person"],
         "priority": data["priority"],
-        "comment": data["comment"],
-    }
-    tasks.append(task)
+        "comment": data["comment"]
+    })
     save_tasks(tasks)
     return jsonify({"message": "Thêm thành công!"})
 
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
+    tasks = load_tasks()
     return jsonify(tasks)
 
 @app.route("/delete/<int:task_no>", methods=["DELETE"])
 def delete_task(task_no):
-    global tasks
+    tasks = load_tasks()
     tasks = [task for task in tasks if int(task["No"]) != task_no]
     save_tasks(tasks)
     return jsonify({"message": "Đã xóa thành công!"})
 
 @app.route("/edit/<int:task_no>", methods=["PUT"])
 def edit_task(task_no):
-    data = request.json
+    tasks = load_tasks()
     for task in tasks:
         if int(task["No"]) == task_no:
-            task.update({
-                "date": data["date"],
-                "device": data["device"],
-                "problem": data["problem"],
-                "cause": data["cause"],
-                "solution": data["solution"],
-                "person": data["person"],
-                "priority": data["priority"],
-                "comment": data["comment"],
-            })
+            task.update(request.json)
             break
     save_tasks(tasks)
     return jsonify({"message": "Đã cập nhật thành công!"})
 
 @app.route("/export", methods=["GET"])
 def export_csv():
+    tasks = load_tasks()
     si = StringIO()
     writer = csv.DictWriter(si, fieldnames=["No", "date", "device", "problem", "cause", "solution", "person", "priority", "comment"])
     writer.writeheader()
@@ -83,4 +74,3 @@ def export_csv():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
